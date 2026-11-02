@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shop Admin - Manage Prices & Stock</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-slate-100 text-slate-900 pb-20">
+
+  <div id="pinOverlay" class="fixed inset-0 z-50 bg-slate-900 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-xs text-center shadow-2xl">
+      <div class="text-3xl mb-2">🔐</div>
+      <h2 class="font-extrabold text-lg">Shop Owner Login</h2>
+      <p class="text-xs text-slate-500 mt-1 mb-4">Enter admin password</p>
+      <input type="password" id="pinInput" placeholder="Password" class="w-full text-center text-lg font-bold bg-slate-100 border border-slate-300 rounded-xl py-2.5 mb-3 focus:outline-none focus:ring-2 focus:ring-blue-600">
+      <button onclick="verifyPin()" class="w-full bg-blue-600 text-white font-bold py-2.5 rounded-xl text-sm">Unlock Dashboard</button>
+    </div>
+  </div>
+
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-20">
+    <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="text-lg">⚙️</span>
+        <h1 class="font-extrabold text-base sm:text-lg">Price & Stock Manager</h1>
+      </div>
+      <a href="index.html" class="text-xs font-bold bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg border border-blue-200">← View Live Shop</a>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto px-4 mt-5 grid grid-cols-1 md:grid-cols-3 gap-5">
+
+    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm h-fit">
+      <h2 id="formTitle" class="font-bold text-sm text-slate-800 mb-3">➕ Add / Update Item</h2>
+      <form id="productForm" onsubmit="saveProduct(event)" class="space-y-3 text-xs">
+        <div>
+          <label class="font-semibold text-slate-600 block mb-1">Item Code / SKU *</label>
+          <input type="text" id="p_id" required placeholder="e.g. EL-105" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg">
+          <p class="text-[10px] text-slate-400 mt-1">Same code as an existing item will update that item.</p>
+        </div>
+        <div>
+          <label class="font-semibold text-slate-600 block mb-1">Product Name *</label>
+          <input type="text" id="p_name" required placeholder="e.g. Spray Pump" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg">
+        </div>
+        <div>
+          <label class="font-semibold text-slate-600 block mb-1">Category *</label>
+          <input type="text" id="p_category" list="categoryList" required placeholder="Pick or type a new category" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg">
+          <datalist id="categoryList"></datalist>
+          <p class="text-[10px] text-slate-400 mt-1">Type any new category and it appears on the shop automatically.</p>
+        </div>
+        <div>
+          <label class="font-semibold text-slate-600 block mb-1">Technical Specs (Optional)</label>
+          <input type="text" id="p_specs" placeholder="e.g. Heavy Duty" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="font-semibold text-slate-600 block mb-1">Selling Price (₹) *</label>
+            <input type="number" id="p_price" required min="0" step="any" placeholder="3200" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-bold">
+          </div>
+          <div>
+            <label class="font-semibold text-slate-600 block mb-1">MRP (₹) (Opt)</label>
+            <input type="number" id="p_mrp" min="0" step="any" placeholder="4000" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg">
+          </div>
+        </div>
+        <div>
+          <label class="font-semibold text-slate-600 block mb-1">Unit (Leave blank if not needed)</label>
+          <input type="text" id="p_unit" placeholder="e.g. Piece, Set" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg">
+        </div>
+        <div>
+          <label class="font-semibold text-slate-600 block mb-1">Product Photo</label>
+          <input type="file" id="imageFile" accept="image/*" onchange="uploadImageFile(this)" class="w-full text-[11px] text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
+          <img id="imgPreview" class="hidden w-20 h-20 object-cover rounded-lg border border-slate-200 mt-2" alt="">
+          <input type="hidden" id="p_image">
+          <p id="uploadStatus" class="text-[10px] text-slate-400 mt-1">Tap to pick from gallery or take photo</p>
+        </div>
+        <div class="flex items-center gap-2 pt-1">
+          <input type="checkbox" id="p_stock" checked class="w-4 h-4 text-blue-600 rounded">
+          <label for="p_stock" class="font-semibold text-slate-700">Currently In Stock</label>
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button type="submit" id="saveBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl">Save to Database</button>
+          <button type="button" onclick="resetForm()" class="px-3 py-2.5 bg-slate-200 rounded-xl font-semibold">Reset</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="md:col-span-2 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-bold text-sm text-slate-800">📦 Current Inventory</h2>
+        <span id="adminCount" class="text-xs text-slate-500">0 items</span>
+      </div>
+      <div id="adminList" class="divide-y divide-slate-100 space-y-2">
+        <p class="text-xs text-slate-400 py-8 text-center">Loading inventory...</p>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const SUPABASE_URL = "https://fabhqatewbsmzutqycsb.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_vm_IHA6csiVVoErrcoeWtw_erFiE0r3";
+    const ADMIN_HASH = "43216eb844fd10acf80cca5d758822febda8884468364e8e6431c0ea25ff7b66"; // SHA-256 of the admin password
+
+    let supabaseClient = null;
+    let allProducts = [];
+
+    try {
+      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } catch (err) {
+      console.error("Supabase init error:", err);
+    }
+
+    const $ = id => document.getElementById(id);
+    function esc(s) {
+      return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+
+    async function sha256(text) {
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+      return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+    async function verifyPin() {
+      if (!window.crypto || !crypto.subtle) return alert("Open this page through your https website link, not as a local file.");
+      if (await sha256($("pinInput").value) === ADMIN_HASH) {
+        $("pinOverlay").classList.add("hidden");
+        loadAdminProducts();
+      } else {
+        alert("Incorrect password");
+        $("pinInput").value = "";
+      }
+    }
+    $("pinInput").addEventListener("keypress", e => { if (e.key === "Enter") verifyPin(); });
+
+    async function uploadImageFile(input) {
+      const file = input.files[0];
+      if (!file) return;
+      const statusEl = $("uploadStatus");
+      statusEl.textContent = "Uploading photo...";
+      statusEl.className = "text-[10px] text-blue-600 font-bold mt-1";
+
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${ext}`;
+
+      const { error } = await supabaseClient.storage.from("product-images").upload(fileName, file, { contentType: file.type });
+      if (error) {
+        statusEl.textContent = "Upload failed: " + error.message + " (check Storage policy)";
+        statusEl.className = "text-[10px] text-rose-600 font-bold mt-1";
+        return;
+      }
+      const { data } = supabaseClient.storage.from("product-images").getPublicUrl(fileName);
+      $("p_image").value = data.publicUrl;
+      $("imgPreview").src = data.publicUrl;
+      $("imgPreview").classList.remove("hidden");
+      statusEl.textContent = "✓ Photo uploaded successfully!";
+      statusEl.className = "text-[10px] text-emerald-600 font-bold mt-1";
+    }
+
+    async function loadAdminProducts() {
+      if (!supabaseClient) return;
+      const listEl = $("adminList");
+      listEl.innerHTML = `<p class="text-xs text-slate-400 py-6 text-center animate-pulse">Fetching inventory...</p>`;
+
+      const { data, error } = await supabaseClient.from("products").select("*").order("created_at", { ascending: false });
+      if (error) {
+        listEl.innerHTML = `<p class="text-xs text-rose-600 py-6 text-center">Error: ${esc(error.message)}</p>`;
+        return;
+      }
+      allProducts = data || [];
+      $("adminCount").textContent = `${allProducts.length} items`;
+      const cats = [...new Set(allProducts.map(p => p.category).filter(Boolean))].sort();
+      $("categoryList").innerHTML = cats.map(c => `<option value="${esc(c)}">`).join("");
+
+      if (allProducts.length === 0) {
+        listEl.innerHTML = `<p class="text-xs text-slate-400 py-6 text-center">No items in database yet.</p>`;
+        return;
+      }
+
+      listEl.innerHTML = allProducts.map(item => {
+        const unitLabel = item.unit && item.unit.trim() !== "" ? ` / ${esc(item.unit)}` : "";
+        return `
+          <div class="pt-3 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5 min-w-0 flex-1">
+              <img src="${esc(item.image_url || 'https://placehold.co/100x100/e2e8f0/475569?text=No+Img')}" class="w-10 h-10 rounded-lg object-cover shrink-0 border border-slate-200" alt="">
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-[10px] font-mono bg-slate-100 px-1.5 py-0.5 rounded">${esc(item.id)}</span>
+                  <span class="text-xs font-bold text-slate-900 truncate">${esc(item.name)}</span>
+                </div>
+                <p class="text-xs text-blue-700 font-extrabold mt-0.5">
+                  ₹${esc(item.selling_price)}${unitLabel}
+                  ${item.mrp ? `<span class="text-slate-400 font-normal line-through ml-1">MRP ₹${esc(item.mrp)}</span>` : ''}
+                </p>
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button data-action="stock" data-id="${esc(item.id)}" class="px-2.5 py-1 rounded-lg text-[11px] font-bold ${item.in_stock ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-700'}">${item.in_stock ? 'In Stock' : 'Out'}</button>
+              <button data-action="edit" data-id="${esc(item.id)}" class="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs" title="Edit">✏️</button>
+              <button data-action="delete" data-id="${esc(item.id)}" class="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs" title="Delete">🗑️</button>
+            </div>
+          </div>`;
+      }).join("");
+    }
+
+    // One click handler for all list buttons (safe with any item ID)
+    $("adminList").addEventListener("click", e => {
+      const btn = e.target.closest("button[data-action]");
+      if (!btn) return;
+      const id = btn.dataset.id;
+      if (btn.dataset.action === "edit") editItem(id);
+      else if (btn.dataset.action === "delete") deleteItem(id);
+      else if (btn.dataset.action === "stock") {
+        const item = allProducts.find(p => p.id === id);
+        if (item) toggleStock(id, !item.in_stock);
+      }
+    });
+
+    async function saveProduct(e) {
+      e.preventDefault();
+      const saveBtn = $("saveBtn");
+      saveBtn.textContent = "Saving...";
+      saveBtn.disabled = true;
+
+      const payload = {
+        id: $("p_id").value.trim(),
+        name: $("p_name").value.trim(),
+        category: $("p_category").value.trim(),
+        specs: $("p_specs").value.trim() || null,
+        selling_price: Number($("p_price").value),
+        mrp: $("p_mrp").value ? Number($("p_mrp").value) : null,
+        unit: $("p_unit").value.trim() || null,
+        image_url: $("p_image").value.trim() || null,
+        in_stock: $("p_stock").checked
+      };
+
+      const { error } = await supabaseClient.from("products").upsert(payload, { onConflict: "id" });
+      saveBtn.textContent = "Save to Database";
+      saveBtn.disabled = false;
+
+      if (error) {
+        alert("Error saving: " + error.message);
+      } else {
+        resetForm();
+        loadAdminProducts();
+      }
+    }
+
+    function editItem(id) {
+      const item = allProducts.find(p => p.id === id);
+      if (!item) return;
+      $("p_id").value = item.id;
+      $("p_name").value = item.name;
+      $("p_category").value = item.category;
+      $("p_specs").value = item.specs || "";
+      $("p_price").value = item.selling_price;
+      $("p_mrp").value = item.mrp || "";
+      $("p_unit").value = item.unit || "";
+      $("p_image").value = item.image_url || "";
+      $("p_stock").checked = !!item.in_stock;
+      if (item.image_url) { $("imgPreview").src = item.image_url; $("imgPreview").classList.remove("hidden"); }
+      else $("imgPreview").classList.add("hidden");
+      $("formTitle").textContent = `✏️ Editing ${item.id}`;
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    async function toggleStock(id, newStatus) {
+      const { data, error } = await supabaseClient.from("products").update({ in_stock: newStatus }).eq("id", id).select();
+      if (error) return alert("Update failed: " + error.message);
+      if (!data || data.length === 0) return alert("Update blocked. Check the Supabase update policy (RLS).");
+      loadAdminProducts();
+    }
+
+    async function deleteItem(id) {
+      if (!confirm(`Delete item ${id}?`)) return;
+      const { data, error } = await supabaseClient.from("products").delete().eq("id", id).select();
+      if (error) return alert("Delete failed: " + error.message);
+      if (!data || data.length === 0) return alert("Nothing deleted. Check the Supabase delete policy (RLS).");
+      loadAdminProducts();
+    }
+
+    function resetForm() {
+      $("productForm").reset();
+      $("p_image").value = "";
+      $("imageFile").value = "";
+      $("imgPreview").classList.add("hidden");
+      $("uploadStatus").textContent = "Tap to pick from gallery or take photo";
+      $("uploadStatus").className = "text-[10px] text-slate-400 mt-1";
+      $("formTitle").textContent = "➕ Add / Update Item";
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>બજરંગ ઇલેક્ટ્રિક - Live Price Catalogue</title>
+  <meta name="theme-color" content="#4f46e5">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    body { background: linear-gradient(135deg, #eef2ff 0%, #fdf2f8 45%, #fff7ed 100%); background-attachment: fixed; }
+
+    /* Banner */
+    .hero { background: linear-gradient(120deg, #4f46e5, #c026d3, #f97316, #4f46e5); background-size: 300% 300%; animation: gradMove 10s ease infinite; }
+    @keyframes gradMove { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+    .float { animation: floaty 5s ease-in-out infinite; }
+    .float.d2 { animation-delay: -1.5s; } .float.d3 { animation-delay: -3s; }
+    @keyframes floaty { 0%,100%{transform:translateY(0) rotate(-6deg)} 50%{transform:translateY(-14px) rotate(6deg)} }
+    .pulse-ring { animation: ring 2s infinite; }
+    @keyframes ring { 0%{box-shadow:0 0 0 0 rgba(16,185,129,.6)} 70%{box-shadow:0 0 0 16px rgba(16,185,129,0)} 100%{box-shadow:0 0 0 0 rgba(16,185,129,0)} }
+
+    /* Cards */
+    .card { transition: transform .25s ease, box-shadow .25s ease; transform-style: preserve-3d; will-change: transform; animation: pop .5s ease both; }
+    .card:hover { box-shadow: 0 18px 35px -12px rgba(79,70,229,.35); }
+    .card:active { transform: scale(.98); }
+    @keyframes pop { from{opacity:0; transform:translateY(18px) scale(.96)} to{opacity:1; transform:none} }
+    .shine { position:relative; overflow:hidden; }
+    .shine::after { content:""; position:absolute; top:0; left:-120%; width:60%; height:100%; background:linear-gradient(100deg,transparent,rgba(255,255,255,.45),transparent); transform:skewX(-20deg); transition:left .7s ease; }
+    .card:hover .shine::after { left:140%; }
+    .card img { transition: transform .5s ease; }
+    .card:hover img { transform: scale(1.08); }
+
+    .chip { transition: transform .15s ease; }
+    .chip:active { transform: scale(.94); }
+    #viewer { animation: fade .2s ease; } @keyframes fade { from{opacity:0} to{opacity:1} }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  </style>
+</head>
+<body class="text-slate-900 pb-28 antialiased">
+
+  <!-- Header -->
+  <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-indigo-100 shadow-sm">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 via-fuchsia-500 to-orange-400 flex items-center justify-center text-white text-lg shadow-md">⚡</div>
+          <div>
+            <h1 class="text-lg font-extrabold bg-gradient-to-r from-indigo-700 to-fuchsia-600 bg-clip-text text-transparent leading-none">બજરંગ ઇલેક્ટ્રિક</h1>
+            <p class="text-[11px] text-slate-500 font-medium mt-0.5">Live Price Catalogue &amp; Estimate Builder</p>
+          </div>
+        </div>
+        <a id="callBtnMobile" href="#" class="sm:hidden text-xs font-bold bg-gradient-to-r from-indigo-600 to-fuchsia-600 text-white px-3 py-2 rounded-xl shadow">📞 Call</a>
+      </div>
+      <div class="relative w-full sm:w-80">
+        <input type="text" id="searchInput" placeholder="Search fans, wires, spray pump..." class="w-full pl-9 pr-8 py-2.5 text-sm bg-white border border-indigo-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-fuchsia-500 transition">
+        <span class="absolute left-3 top-3 text-slate-400 text-sm pointer-events-none">🔍</span>
+        <button id="clearSearchBtn" class="hidden absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 text-sm px-1">✕</button>
+      </div>
+    </div>
+    <div id="categoryBar" class="max-w-6xl mx-auto px-4 py-2.5 flex gap-2 overflow-x-auto no-scrollbar border-t border-indigo-50"></div>
+  </header>
+
+  <!-- Hero Banner -->
+  <div class="max-w-6xl mx-auto px-4 mt-4">
+    <div class="hero relative rounded-3xl overflow-hidden shadow-lg min-h-[11rem] sm:min-h-[14rem] flex items-center">
+      <span class="float absolute right-4 top-3 text-4xl sm:text-6xl opacity-90">💡</span>
+      <span class="float d2 absolute right-20 sm:right-40 bottom-4 text-3xl sm:text-5xl opacity-80">🔌</span>
+      <span class="float d3 absolute right-2 bottom-3 text-3xl sm:text-5xl opacity-80">🌀</span>
+      <span class="float d2 absolute right-1/3 top-2 text-2xl sm:text-4xl opacity-60 hidden sm:block">🚜</span>
+      <div class="relative px-6 sm:px-10 py-6 text-white max-w-xl">
+        <span class="inline-block text-[10px] sm:text-xs font-bold tracking-widest uppercase bg-white/20 backdrop-blur px-3 py-1 rounded-full mb-2">Electrical &amp; Agriculture Solutions</span>
+        <h2 class="text-xl sm:text-3xl font-extrabold leading-tight drop-shadow">Powering Farms &amp; Homes with Quality Hardware</h2>
+        <p class="text-xs sm:text-sm text-white/90 mt-1.5">Live prices updated daily. Build your estimate and send it on WhatsApp.</p>
+        <div class="flex gap-2 mt-3">
+          <a href="#productGrid" class="text-xs sm:text-sm font-bold bg-white text-indigo-700 px-4 py-2 rounded-xl shadow hover:scale-105 transition">Browse Items ↓</a>
+          <a id="waHeroBtn" href="#" target="_blank" rel="noopener" class="text-xs sm:text-sm font-bold bg-emerald-500 text-white px-4 py-2 rounded-xl shadow hover:scale-105 transition">💬 WhatsApp Us</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <main class="max-w-6xl mx-auto px-4 mt-5">
+    <div class="flex items-center justify-between mb-3 text-xs text-slate-600">
+      <span id="itemCountText" class="font-semibold">Loading live inventory...</span>
+      <button id="refreshBtn" class="text-indigo-600 font-bold hover:underline">↻ Refresh Prices</button>
+    </div>
+    <div id="productGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-5">
+      <div class="col-span-full py-16 text-center text-slate-400 text-sm animate-pulse">Fetching latest prices...</div>
+    </div>
+  </main>
+
+  <footer class="max-w-6xl mx-auto px-4 mt-10 text-center text-[11px] text-slate-500">
+    Prices are indicative and may change. Please confirm with the shop before buying.
+  </footer>
+
+  <!-- Floating WhatsApp -->
+  <a id="waFloat" href="#" target="_blank" rel="noopener" class="pulse-ring fixed right-4 bottom-24 z-30 w-14 h-14 rounded-full bg-emerald-500 text-white text-2xl flex items-center justify-center shadow-xl hover:scale-110 transition" aria-label="Chat on WhatsApp">💬</a>
+
+  <!-- Estimate Bar -->
+  <div id="estimateBar" class="fixed bottom-0 inset-x-0 z-40 bg-gradient-to-r from-indigo-900 via-purple-900 to-fuchsia-900 text-white p-3 shadow-2xl transform translate-y-full transition-transform duration-300">
+    <div class="max-w-6xl mx-auto flex items-center justify-between gap-4">
+      <div id="openDrawerArea" class="cursor-pointer flex-1">
+        <div class="flex items-center gap-2">
+          <span id="cartBadgeCount" class="bg-amber-400 text-slate-900 text-xs font-bold px-2 py-0.5 rounded-full">0 Items</span>
+          <span class="text-xs text-indigo-200 underline">View / Edit List ▲</span>
+        </div>
+        <div class="text-lg font-extrabold mt-0.5">Est. Total: ₹<span id="cartBarTotal">0</span></div>
+      </div>
+      <button id="sendBarBtn" class="bg-emerald-500 hover:bg-emerald-600 text-white text-xs sm:text-sm font-bold px-4 py-2.5 rounded-xl shadow">Send on WhatsApp</button>
+    </div>
+  </div>
+
+  <!-- Estimate Drawer -->
+  <div id="estimateDrawer" class="fixed inset-0 z-50 hidden">
+    <div id="drawerBackdrop" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
+    <div class="fixed bottom-0 sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
+      <div class="p-4 flex items-center justify-between bg-gradient-to-r from-indigo-600 to-fuchsia-600 text-white">
+        <div>
+          <h3 class="font-bold text-base">Estimate / Quotation List</h3>
+          <p class="text-xs text-white/80">Calculate bill or send enquiry to shop</p>
+        </div>
+        <button id="closeDrawerBtn" class="w-8 h-8 rounded-full bg-white/20 font-bold text-sm">✕</button>
+      </div>
+      <div id="drawerItemsList" class="p-4 overflow-y-auto divide-y divide-slate-100 flex-1"></div>
+      <div class="p-4 border-t border-slate-200 bg-slate-50 space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-sm font-medium text-slate-600">Estimated Total</span>
+          <span class="text-xl font-extrabold text-slate-900">₹<span id="drawerTotalAmount">0</span></span>
+        </div>
+        <div class="flex gap-2">
+          <button id="clearCartBtn" class="px-4 py-2.5 rounded-xl border border-rose-200 text-rose-600 text-xs font-semibold">Clear All</button>
+          <button id="sendDrawerBtn" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm py-2.5 rounded-xl shadow">📲 Send Quotation to Shop</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Photo Viewer -->
+  <div id="viewer" class="fixed inset-0 z-[60] hidden bg-slate-950/90 backdrop-blur items-center justify-center p-4">
+    <button id="viewerClose" class="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/20 text-white font-bold">✕</button>
+    <div class="max-w-lg w-full text-center">
+      <img id="viewerImg" src="" alt="" class="w-full max-h-[70vh] object-contain rounded-2xl bg-white">
+      <p id="viewerName" class="text-white font-bold mt-3"></p>
+      <p id="viewerPrice" class="text-amber-300 font-extrabold text-lg"></p>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://fabhqatewbsmzutqycsb.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_vm_IHA6csiVVoErrcoeWtw_erFiE0r3";
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // CHANGE THESE to your real numbers
+    const SHOP_CONFIG = {
+      shopName: "બજરંગ ઇલેક્ટ્રિક",
+      whatsappNumber: "919824980276",
+      phoneNumber: "+919824980276"
+    };
+
+    const PLACEHOLDER = "https://placehold.co/400x300/e0e7ff/4f46e5?text=Electrical+Item";
+    const PALETTE = [
+      { chip: "bg-indigo-600", soft: "bg-indigo-100 text-indigo-700", bar: "from-indigo-500 to-blue-500" },
+      { chip: "bg-fuchsia-600", soft: "bg-fuchsia-100 text-fuchsia-700", bar: "from-fuchsia-500 to-pink-500" },
+      { chip: "bg-orange-500", soft: "bg-orange-100 text-orange-700", bar: "from-orange-500 to-amber-400" },
+      { chip: "bg-emerald-600", soft: "bg-emerald-100 text-emerald-700", bar: "from-emerald-500 to-teal-400" },
+      { chip: "bg-rose-600", soft: "bg-rose-100 text-rose-700", bar: "from-rose-500 to-red-400" },
+      { chip: "bg-cyan-600", soft: "bg-cyan-100 text-cyan-700", bar: "from-cyan-500 to-sky-400" },
+      { chip: "bg-violet-600", soft: "bg-violet-100 text-violet-700", bar: "from-violet-500 to-purple-400" }
+    ];
+
+    let products = [], activeCategory = "All", estimateCart = {};
+    const $ = id => document.getElementById(id);
+    const productGrid = $("productGrid"), categoryBar = $("categoryBar"), searchInput = $("searchInput");
+
+    function esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+    function formatINR(n) { return Number(n || 0).toLocaleString("en-IN"); }
+    function colorFor(cat) {
+      let h = 0; for (const ch of String(cat)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+      return PALETTE[h % PALETTE.length];
+    }
+
+    // Contact links
+    $("callBtnMobile").href = "tel:" + SHOP_CONFIG.phoneNumber;
+    const waBase = `https://wa.me/${SHOP_CONFIG.whatsappNumber}`;
+    const hello = encodeURIComponent(`Hello ${SHOP_CONFIG.shopName}, I want to enquire about your products.`);
+    $("waHeroBtn").href = $("waFloat").href = `${waBase}?text=${hello}`;
+
+    async function fetchProducts() {
+      $("itemCountText").textContent = "Syncing prices...";
+      const { data, error } = await supabaseClient.from("products").select("*").order("created_at", { ascending: false });
+      if (error) {
+        productGrid.innerHTML = `<div class="col-span-full bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center text-xs text-amber-900"><p class="font-bold text-sm mb-1">Could not load prices</p><p>${esc(error.message)}</p></div>`;
+        return;
+      }
+      products = data || [];
+      if (activeCategory !== "All" && !products.some(p => p.category === activeCategory)) activeCategory = "All";
+      renderCategories();
+      renderProducts();
+      updateEstimateUI();
+    }
+
+    function renderCategories() {
+      const cats = ["All", ...new Set(products.map(p => p.category).filter(Boolean))];
+      categoryBar.innerHTML = cats.map(cat => {
+        const on = activeCategory === cat;
+        const col = cat === "All" ? "bg-slate-800" : colorFor(cat).chip;
+        return `<button data-cat="${esc(cat)}" class="chip px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap ${on ? col + ' text-white shadow-md scale-105' : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-300'}">${esc(cat)}</button>`;
+      }).join("");
+    }
+
+    function renderProducts() {
+      const query = searchInput.value.toLowerCase().trim();
+      $("clearSearchBtn").classList.toggle("hidden", !query);
+      const filtered = products.filter(it => {
+        const okCat = activeCategory === "All" || it.category === activeCategory;
+        const okSearch = !query || (it.name || "").toLowerCase().includes(query) || (it.specs || "").toLowerCase().includes(query) || (it.id || "").toLowerCase().includes(query) || (it.category || "").toLowerCase().includes(query);
+        return okCat && okSearch;
+      });
+
+      $("itemCountText").textContent = `Showing ${filtered.length} item${filtered.length === 1 ? "" : "s"}`;
+      if (!filtered.length) {
+        productGrid.innerHTML = `<div class="col-span-full text-center py-12 text-slate-400 text-sm">No matching items found.</div>`;
+        return;
+      }
+
+      productGrid.innerHTML = filtered.map((item, i) => {
+        const col = colorFor(item.category);
+        const hasDiscount = item.mrp && Number(item.mrp) > Number(item.selling_price);
+        const pct = hasDiscount ? Math.round(((item.mrp - item.selling_price) / item.mrp) * 100) : 0;
+        const unit = item.unit && String(item.unit).trim() ? String(item.unit).trim() : "";
+        const qty = estimateCart[item.id] || 0;
+        const wa = encodeURIComponent(`Hello ${SHOP_CONFIG.shopName}, I want to enquire about:\n*${item.name}*\nPrice: ₹${formatINR(item.selling_price)}${unit ? ` (${unit})` : ""}`);
+        const img = esc(item.image_url || PLACEHOLDER);
+
+        return `
+        <div class="card bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-md flex flex-col justify-between relative ${!item.in_stock ? 'opacity-75' : ''}" style="animation-delay:${Math.min(i, 12) * 40}ms">
+          <div class="h-1.5 bg-gradient-to-r ${col.bar}"></div>
+          <div>
+            <div class="shine relative h-36 sm:h-44 bg-slate-100 cursor-zoom-in" data-view="${esc(item.id)}">
+              <img src="${img}" alt="${esc(item.name)}" loading="lazy" onerror="this.src='${PLACEHOLDER}'" class="w-full h-full object-cover">
+              ${hasDiscount ? `<span class="absolute top-2 left-2 bg-gradient-to-r from-rose-500 to-orange-500 text-white text-[10px] font-extrabold px-2 py-1 rounded-lg shadow">${pct}% OFF</span>` : ""}
+              ${!item.in_stock ? `<div class="absolute inset-0 bg-slate-900/60 flex items-center justify-center"><span class="bg-rose-600 text-white font-bold text-[11px] uppercase px-2.5 py-1 rounded">Out of Stock</span></div>` : ""}
+              <span class="absolute bottom-2 right-2 bg-black/40 text-white text-[10px] px-2 py-0.5 rounded-full">🔍 Tap to zoom</span>
+            </div>
+            <div class="p-3">
+              <div class="flex items-center justify-between gap-1">
+                <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full truncate ${col.soft}">${esc(item.category)}</span>
+                <span class="text-[10px] text-slate-400 font-mono">${esc(item.id)}</span>
+              </div>
+              <h2 class="font-bold text-sm text-slate-900 leading-snug mt-2 line-clamp-2">${esc(item.name)}</h2>
+              ${item.specs ? `<p class="text-[11px] text-slate-600 bg-slate-50 border border-slate-100 rounded-lg px-2 py-1 mt-2 font-medium line-clamp-2">${esc(item.specs)}</p>` : ""}
+            </div>
+          </div>
+          <div class="p-3 pt-2 border-t border-slate-100 bg-gradient-to-b from-white to-slate-50">
+            <div class="flex items-baseline flex-wrap gap-1 mb-2.5">
+              <span class="text-lg sm:text-xl font-extrabold bg-gradient-to-r from-indigo-700 to-fuchsia-600 bg-clip-text text-transparent">₹${formatINR(item.selling_price)}</span>
+              ${unit ? `<span class="text-xs font-medium text-slate-500">/ ${esc(unit)}</span>` : ""}
+              ${hasDiscount ? `<span class="text-[11px] text-slate-400 line-through ml-auto">MRP ₹${formatINR(item.mrp)}</span>` : ""}
+            </div>
+            ${item.in_stock ? `
+              <div class="flex items-center gap-1.5">
+                ${qty === 0
+                  ? `<button data-add="${esc(item.id)}" class="chip flex-1 bg-gradient-to-r from-indigo-600 to-fuchsia-600 text-white text-xs font-bold py-2 px-2 rounded-xl shadow">+ Add to Estimate</button>`
+                  : `<div class="flex-1 flex items-center justify-between bg-indigo-50 border border-indigo-200 rounded-xl p-0.5">
+                      <button data-qty="${esc(item.id)}" data-n="${qty - 1}" class="w-7 h-7 rounded-lg bg-white text-indigo-700 font-bold text-sm">-</button>
+                      <span class="text-xs font-extrabold text-indigo-900">${qty} added</span>
+                      <button data-qty="${esc(item.id)}" data-n="${qty + 1}" class="w-7 h-7 rounded-lg bg-indigo-600 text-white font-bold text-sm">+</button>
+                    </div>`}
+                <a href="${waBase}?text=${wa}" target="_blank" rel="noopener" class="w-9 h-9 flex items-center justify-center rounded-xl bg-emerald-100 text-emerald-800 text-sm shrink-0">💬</a>
+              </div>`
+              : `<button disabled class="w-full py-2 rounded-xl bg-slate-200 text-slate-500 text-xs font-semibold">Unavailable</button>`}
+          </div>
+        </div>`;
+      }).join("");
+    }
+
+    // 3D tilt (mouse only, no effect on touch)
+    productGrid.addEventListener("pointermove", e => {
+      if (e.pointerType !== "mouse") return;
+      const card = e.target.closest(".card"); if (!card) return;
+      const r = card.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
+      card.style.transform = `perspective(700px) rotateY(${x * 8}deg) rotateX(${-y * 8}deg) translateY(-4px)`;
+    });
+    productGrid.addEventListener("pointerout", e => {
+      const card = e.target.closest(".card");
+      if (card && !card.contains(e.relatedTarget)) card.style.transform = "";
+    });
+
+    // Clicks: add / qty / zoom
+    productGrid.addEventListener("click", e => {
+      const add = e.target.closest("[data-add]"); if (add) return updateCart(add.dataset.add, 1);
+      const q = e.target.closest("[data-qty]"); if (q) return updateCart(q.dataset.qty, Number(q.dataset.n));
+      const v = e.target.closest("[data-view]"); if (v) openViewer(v.dataset.view);
+    });
+    categoryBar.addEventListener("click", e => {
+      const b = e.target.closest("[data-cat]"); if (!b) return;
+      activeCategory = b.dataset.cat; renderCategories(); renderProducts();
+    });
+
+    function openViewer(id) {
+      const p = products.find(x => x.id === id); if (!p) return;
+      $("viewerImg").src = p.image_url || PLACEHOLDER;
+      $("viewerName").textContent = p.name;
+      $("viewerPrice").textContent = "₹" + formatINR(p.selling_price) + (p.unit ? " / " + p.unit : "");
+      $("viewer").classList.remove("hidden"); $("viewer").classList.add("flex");
+    }
+    function closeViewer() { $("viewer").classList.add("hidden"); $("viewer").classList.remove("flex"); }
+    $("viewerClose").onclick = closeViewer;
+    $("viewer").addEventListener("click", e => { if (e.target.id === "viewer") closeViewer(); });
+    document.addEventListener("keydown", e => { if (e.key === "Escape") { closeViewer(); toggleDrawer(false); } });
+
+    // Cart
+    function updateCart(id, n) {
+      if (n <= 0) delete estimateCart[id]; else estimateCart[id] = n;
+      renderProducts(); updateEstimateUI();
+    }
+    function clearCart() { estimateCart = {}; toggleDrawer(false); renderProducts(); updateEstimateUI(); }
+
+    function updateEstimateUI() {
+      // drop items that no longer exist
+      Object.keys(estimateCart).forEach(id => { if (!products.find(p => p.id === id)) delete estimateCart[id]; });
+      const ids = Object.keys(estimateCart);
+      let totalQty = 0, total = 0;
+      $("drawerItemsList").innerHTML = ids.map(id => {
+        const p = products.find(x => x.id === id);
+        const qty = estimateCart[id], line = p.selling_price * qty;
+        totalQty += qty; total += line;
+        const unit = p.unit && String(p.unit).trim() ? ` / ${esc(String(p.unit).trim())}` : "";
+        return `
+          <div class="py-3 flex items-center justify-between gap-3">
+            <div class="flex-1 min-w-0">
+              <h4 class="text-xs font-bold text-slate-900 truncate">${esc(p.name)}</h4>
+              <p class="text-[11px] text-slate-500">₹${formatINR(p.selling_price)}${unit} × ${qty}</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="flex items-center bg-slate-100 rounded-lg p-0.5 border border-slate-200">
+                <button data-dqty="${esc(id)}" data-n="${qty - 1}" class="w-6 h-6 rounded bg-white font-bold text-xs">-</button>
+                <span class="px-2.5 text-xs font-bold">${qty}</span>
+                <button data-dqty="${esc(id)}" data-n="${qty + 1}" class="w-6 h-6 rounded bg-white font-bold text-xs">+</button>
+              </div>
+              <div class="w-16 text-right font-extrabold text-xs">₹${formatINR(line)}</div>
+            </div>
+          </div>`;
+      }).join("");
+      $("cartBadgeCount").textContent = `${ids.length} Items (${totalQty} Qty)`;
+      $("cartBarTotal").textContent = $("drawerTotalAmount").textContent = formatINR(total);
+      $("estimateBar").classList.toggle("translate-y-full", ids.length === 0);
+      $("waFloat").style.bottom = ids.length ? "6.5rem" : "1.25rem";
+      if (!ids.length) toggleDrawer(false);
+    }
+    $("drawerItemsList").addEventListener("click", e => {
+      const b = e.target.closest("[data-dqty]"); if (b) updateCart(b.dataset.dqty, Number(b.dataset.n));
+    });
+
+    function toggleDrawer(show) { $("estimateDrawer").classList.toggle("hidden", !show); }
+    $("openDrawerArea").onclick = () => toggleDrawer(true);
+    $("drawerBackdrop").onclick = $("closeDrawerBtn").onclick = () => toggleDrawer(false);
+    $("clearCartBtn").onclick = clearCart;
+    $("sendBarBtn").onclick = $("sendDrawerBtn").onclick = sendEstimateToWhatsApp;
+
+    function sendEstimateToWhatsApp() {
+      const ids = Object.keys(estimateCart); if (!ids.length) return;
+      let total = 0;
+      const lines = [`*⚡ Estimate Enquiry - ${SHOP_CONFIG.shopName}*`, `----------------------------`];
+      ids.forEach((id, i) => {
+        const p = products.find(x => x.id === id); if (!p) return;
+        const qty = estimateCart[id], sub = p.selling_price * qty; total += sub;
+        const u = p.unit && String(p.unit).trim() ? ` (${String(p.unit).trim()})` : "";
+        lines.push(`${i + 1}. *${p.name}*${u}\n   Qty: ${qty} × ₹${formatINR(p.selling_price)} = *₹${formatINR(sub)}*`);
+      });
+      lines.push(`----------------------------\n*Estimated Total: ₹${formatINR(total)}*`);
+      window.open(`${waBase}?text=${encodeURIComponent(lines.join("\n"))}`, "_blank");
+    }
+
+    searchInput.addEventListener("input", renderProducts);
+    $("clearSearchBtn").onclick = () => { searchInput.value = ""; renderProducts(); };
+    $("refreshBtn").onclick = fetchProducts;
+    fetchProducts();
+  </script>
+</body>
+</html>
